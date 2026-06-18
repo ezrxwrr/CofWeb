@@ -32,8 +32,8 @@ class ReservasiController extends Controller
         $request->validate([
             'id_meja' => 'required|exists:meja,id_meja',
             'nama_pelanggan' => 'required',
-            'email' => 'nullable|email',
-            'no_telp' => 'required',
+            'email' => 'nullable|string',
+            'no_telp' => 'required|string',
             'tanggal' => 'required|date',
             'jam' => 'required',
         ]);

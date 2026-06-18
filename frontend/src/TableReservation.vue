@@ -164,11 +164,13 @@ const isFormValid = computed(() => {
 const goToMenu = async () => {
   try {
     const selectedMeja = tables.value.find((t: any) => t.id === globalStore.reservation.tables[0])
+    const contact = globalStore.reservation.contact
+    const isEmail = contact.includes('@')
     const res = await createReservasi({
       id_meja: selectedMeja?.id_meja,
       nama_pelanggan: globalStore.reservation.name,
-      no_telp: globalStore.reservation.contact,
-      email: '',
+      no_telp: isEmail ? '-' : contact,
+      email: isEmail ? contact : '-',
       tanggal: globalStore.reservation.date,
       jam: globalStore.reservation.time,
     })
