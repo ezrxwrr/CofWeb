@@ -86,6 +86,28 @@
       </div>
     </div>
 
+    <div class="modal-overlay" v-if="showMenuForm" @click="showMenuForm = false">
+      <div class="modal-content" @click.stop>
+        <h3>Tambah Menu Baru</h3>
+        <div class="form-group">
+          <label>NAMA MENU</label>
+          <input type="text" v-model="newMenu.nama_item" placeholder="Nama menu" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label>DESKRIPSI</label>
+          <input type="text" v-model="newMenu.deskripsi" placeholder="Deskripsi menu" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label>HARGA (Rp)</label>
+          <input type="number" v-model="newMenu.harga" placeholder="0" class="form-input" />
+        </div>
+        <div class="modal-actions">
+          <button class="btn-sm btn-outline" @click="showMenuForm = false">Batal</button>
+          <button class="btn-sm btn-approve" @click="submitNewMenu" :disabled="!newMenu.nama_item || !newMenu.harga">Simpan</button>
+        </div>
+      </div>
+    </div>
+
     <button class="fab-btn" @click="handleFabClick">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </button>
@@ -112,76 +134,162 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { globalStore } from './store'
+import {
+  getMeja, getMenus, getReservasi, updateReservasi, createMenu,
+  occupyMeja, vacateMeja
+} from './services/api'
 
 const todayDate = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
-// State Navigasi Lokal
 const activeTab = ref('dashboard')
 
-// Keluar dari mode staff
 const exitToCustomer = () => {
   globalStore.isStaff = false
   globalStore.currentView = 'Home'
 }
 
-// ==========================================
-// DUMMY DATA & METHODS UNTUK BACKEND DEVS
-// ==========================================
-
 // 1. DATA MEJA
-const tables = ref([
-  { id: 'T-01', status: 'available' },
-  { id: 'T-02', status: 'occupied' },
-  { id: 'T-03', status: 'cleaning' }
-])
+const tables = ref<any[]>([])
 const getTableClass = (status: string) => {
   if (status === 'occupied') return 'card-occ'
   if (status === 'cleaning') return 'card-cleaning'
   return ''
 }
-const syncTableToBackend = (id: string, newStatus: string) => {
-  // TODO [BACKEND]: POST /api/tables/update { id, status: newStatus }
-  console.log(`Backend Sync: Meja ${id} diubah jadi ${newStatus}`)
+const syncTableToBackend = async (kode: string, newStatus: string) => {
+  const meja = tables.value.find((t: any) => t.id === kode)
+  if (!meja) return
+  try {
+    if (newStatus === 'occupied') {
+      await occupyMeja(meja.id_meja)
+    } else {
+      await vacateMeja(meja.id_meja)
+    }
+    meja.status = newStatus
+  } catch (e) {
+    console.error('Gagal update meja', e)
+  }
+}
+
+const refreshTables = async () => {
+  try {
+    const res = await getMeja()
+    tables.value = res.data.map((m: any) => ({
+      id: m.kode_meja,
+      id_meja: m.id_meja,
+      status: m.status_meja === 'terisi' ? 'occupied' : 'available',
+    }))
+  } catch (e) {
+    console.error('Gagal refresh meja', e)
+  }
 }
 
 // 2. DATA RESERVASI
-const reservations = ref([
-  { id: 1, name: 'Andreana', time: '14:00', pax: 2, tables: ['T-02'], status: 'pending' },
-  { id: 2, name: 'Budi Siregar', time: '13:30', pax: 4, tables: ['B1', 'B2'], status: 'arrived' }
-])
-const pendingCount = computed(() => reservations.value.filter(r => r.status === 'pending').length)
+const reservations = ref<any[]>([])
+const pendingCount = computed(() => reservations.value.filter((r: any) => r.status === 'pending' || r.status === 'menunggu').length)
 
-const updateResStatus = (id: number, newStatus: string) => {
-  // TODO [BACKEND]: POST /api/reservations/update { id, status: newStatus }
-  const res = reservations.value.find(r => r.id === id)
-  if (res) res.status = newStatus
+const statusMapToBackend: Record<string, string> = {
+  pending: 'menunggu',
+  approved: 'disetujui',
+  arrived: 'hadir',
+  rejected: 'ditolak',
+}
+const updateResStatus = async (id: number, newStatus: string) => {
+  try {
+    await updateReservasi(id, { status_reservasi: statusMapToBackend[newStatus] || newStatus })
+    const res = reservations.value.find((r: any) => r.id === id)
+    if (res) res.status = newStatus
+  } catch (e) {
+    console.error('Gagal update reservasi', e)
+  }
 }
 
 // 3. DATA MENU
-const menuItems = ref([
-  { id: 1, name: 'Iced Ceremonial Matcha', price: 45000, isAvailable: true },
-  { id: 2, name: 'Hojicha Latte', price: 40000, isAvailable: true },
-  { id: 3, name: 'Cheese Cake', price: 38000, isAvailable: false }
-])
+const menuItems = ref<any[]>([])
 
 const syncPriceToBackend = (id: number, newPrice: number) => {
-  // TODO [BACKEND]: POST /api/menu/update-price { id, price: newPrice }
   console.log(`Backend Sync: Harga item ${id} jadi Rp${newPrice}`)
 }
 
 const syncAvailability = (id: number, isAvail: boolean) => {
-  // TODO [BACKEND]: POST /api/menu/update-stock { id, isAvailable: isAvail }
   console.log(`Backend Sync: Status item ${id} ketersediaan: ${isAvail}`)
 }
 
-// 4. FLOATING ACTION BUTTON (Dinamis berdasarkan Tab)
-const handleFabClick = () => {
-  if (activeTab.value === 'reservations') alert('TODO [BACKEND]: Buka Modal Buat Reservasi Manual (Walk-in)')
-  if (activeTab.value === 'menu') alert('TODO [BACKEND]: Buka Modal Tambah Menu Baru')
-  if (activeTab.value === 'dashboard') alert('TODO [BACKEND]: Buka Modal Tambah Meja Fisik Baru')
+// 4. TAMBAH MENU
+const showMenuForm = ref(false)
+const newMenu = ref({ nama_item: '', harga: 0, deskripsi: '' })
+
+const refreshMenu = async () => {
+  try {
+    const res = await getMenus()
+    menuItems.value = res.data.map((m: any) => ({
+      id: m.id_menu,
+      name: m.nama_item,
+      price: m.harga,
+      isAvailable: true,
+    }))
+  } catch (e) {
+    console.error('Gagal refresh menu', e)
+  }
 }
+
+const submitNewMenu = async () => {
+  try {
+    await createMenu(newMenu.value)
+    showMenuForm.value = false
+    newMenu.value = { nama_item: '', harga: 0, deskripsi: '' }
+    await refreshMenu()
+  } catch (e) {
+    console.error('Gagal tambah menu', e)
+  }
+}
+
+// 5. FLOATING ACTION BUTTON
+const handleFabClick = () => {
+  if (activeTab.value === 'menu') showMenuForm.value = true
+  if (activeTab.value === 'dashboard') alert('TODO: Buka Modal Tambah Meja Fisik Baru')
+  if (activeTab.value === 'reservations') alert('TODO: Buka Modal Buat Reservasi Manual (Walk-in)')
+}
+
+onMounted(async () => {
+  try {
+    const [mejaRes, menuRes, reservasiRes] = await Promise.all([
+      getMeja(), getMenus(), getReservasi()
+    ])
+
+    tables.value = mejaRes.data.map((m: any) => ({
+      id: m.kode_meja,
+      id_meja: m.id_meja,
+      status: m.status_meja === 'terisi' ? 'occupied' : 'available',
+    }))
+
+    menuItems.value = menuRes.data.map((m: any) => ({
+      id: m.id_menu,
+      name: m.nama_item,
+      price: m.harga,
+      isAvailable: true,
+    }))
+
+    const statusMap: Record<string, string> = {
+      menunggu: 'pending',
+      disetujui: 'approved',
+      dibayar: 'approved',
+      hadir: 'arrived',
+      ditolak: 'rejected',
+    }
+    reservations.value = reservasiRes.data.map((r: any) => ({
+      id: r.id_reservasi,
+      name: r.nama_pelanggan,
+      time: r.jam,
+      pax: r.meja?.kapasitas || '-',
+      tables: r.meja ? [r.meja.kode_meja] : [],
+      status: statusMap[r.status_reservasi] || r.status_reservasi,
+    }))
+  } catch (e) {
+    console.error('Gagal memuat data dashboard', e)
+  }
+})
 </script>
 
 <style scoped>
@@ -250,6 +358,17 @@ const handleFabClick = () => {
 .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
 input:checked + .slider { background-color: #4A5837; }
 input:checked + .slider:before { transform: translateX(20px); }
+
+/* Modal */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 10000; }
+.modal-overlay .modal-content { background: white; padding: 24px; border-radius: 16px; width: 85%; max-width: 340px; }
+.modal-overlay .modal-content h3 { font-family: var(--font-serif); margin-bottom: 20px; }
+.modal-overlay .form-group { margin-bottom: 16px; }
+.modal-overlay .form-group label { display: block; font-size: 0.7rem; font-weight: 600; color: #5B6A4B; margin-bottom: 6px; letter-spacing: 0.5px; }
+.modal-overlay .form-input { width: 100%; padding: 12px; border: 1px solid #D6DED0; border-radius: 10px; font-size: 0.9rem; outline: none; }
+.modal-overlay .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+.modal-overlay .modal-actions .btn-sm { flex: 1; }
+.modal-overlay .btn-sm:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* FAB */
 .fab-btn { position: fixed; bottom: 84px; left: 50%; transform: translateX(130px); width: 52px; height: 52px; background-color: #4A5837; border-radius: 50%; border: none; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 12px rgba(74, 88, 55, 0.3); cursor: pointer; z-index: 999; }

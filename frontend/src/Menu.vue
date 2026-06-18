@@ -18,7 +18,8 @@
           <h3>{{ item.name }}</h3>
           <p class="desc">{{ item.desc }}</p>
           <div class="card-bottom">
-            <span class="price">Rp {{ item.price.toLocaleString('id-ID') }}</span>
+            <span class="price">Rp {{ (item.price * 1.1).toLocaleString('id-ID') }}</span>
+            <span class="pax-badge">+10% tax</span>
             
             <div class="qty-controls" v-if="getItemCount(item.id) > 0">
               <button class="qty-btn" @click.stop="removeFromCart(item.id)">-</button>
@@ -47,17 +48,46 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { globalStore } from './store'
+import { getMenus } from './services/api'
 
-const menuItems = ref([
-  { id: 1, name: 'Iced Ceremonial Matcha', desc: 'Smooth, layered, deeply refreshing.', price: 45000, emoji: '🍵' },
-  { id: 2, name: 'Hojicha Latte', desc: 'Roasted green tea with creamy milk.', price: 40000, emoji: '☕' },
-  { id: 3, name: 'Chocoberry', desc: 'Dark chocolate blended with pure blueberry.', price: 45000, emoji: '🫐' },
-  { id: 4, name: 'Cheese Cake', desc: 'Classic basque burnt cheesecake.', price: 38000, emoji: '🍰' },
-  { id: 5, name: 'Chicken Ricebowl', desc: 'Tender chicken with authentic sambal matah.', price: 48000, emoji: '🍱' },
-  { id: 6, name: 'Truffle Fries', desc: 'Crispy fries tossed in truffle oil and parmesan.', price: 35000, emoji: '🍟' }
-])
+const menuItems = ref<any[]>([])
+
+const emojiMap: Record<string, string> = {
+  'matcha': '🍵',
+  'hojicha': '☕',
+  'chocoberry': '🫐',
+  'cheese cake': '🍰',
+  'ricebowl': '🍱',
+  'truffle': '🍟',
+  'coffee': '☕',
+  'tea': '🍵',
+  'cake': '🍰',
+  'fries': '🍟',
+  'rice': '🍚',
+}
+
+const getEmoji = (name: string) => {
+  const key = Object.keys(emojiMap).find(k => name.toLowerCase().includes(k))
+  return key ? emojiMap[key] : '🍽️'
+}
+
+onMounted(async () => {
+  try {
+    const res = await getMenus()
+    menuItems.value = res.data.map((m: any) => ({
+      id: m.id_menu,
+      name: m.nama_item,
+      desc: m.deskripsi,
+      price: m.harga,
+      pax: m.pax,
+      emoji: getEmoji(m.nama_item),
+    }))
+  } catch (e) {
+    console.error('Gagal memuat menu', e)
+  }
+})
 
 const getItemCount = (id: number) => {
   return globalStore.cart.filter(item => item.id === id).length
@@ -108,6 +138,7 @@ const goToPayment = () => {
 .desc { font-size: 0.8rem; color: #666; margin: 4px 0 12px; line-height: 1.3;}
 .card-bottom { display: flex; justify-content: space-between; align-items: center; pointer-events: auto;}
 .price { font-weight: 600; color: var(--primary); font-size: 0.9rem;}
+.pax-badge { font-size: 0.65rem; color: #8C9C7B; background: var(--card-bg); padding: 2px 8px; border-radius: 10px; }
 
 /* Style Kontrol Plus Minus */
 .add-btn { background-color: var(--primary); color: white; border: none; border-radius: 50%; width: 28px; height: 28px; display: flex; justify-content: center; align-items: center; cursor: pointer;}

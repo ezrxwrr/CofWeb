@@ -101,8 +101,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { globalStore } from './store'
+import { getMeja, createReservasi } from './services/api'
 
 const today = new Date()
 const currentYear = today.getFullYear()
@@ -114,18 +115,24 @@ if (!globalStore.reservation.date) {
   globalStore.reservation.date = `${currentYear}-${currentMonth}-${today.getDate()}`
 }
 
-const tables = ref([
-  { id: 'A1', capacity: 4, status: 'available' },
-  { id: 'A2', capacity: 6, status: 'occupied' },
-  { id: 'A3', capacity: 4, status: 'available' },
-  { id: 'B1', capacity: 2, status: 'available' },
-  { id: 'B2', capacity: 6, status: 'available' },
-  { id: 'B3', capacity: 4, status: 'available' }
-])
+const tables = ref<any[]>([])
 
-// Total kapasitas dari semua meja yang available
+onMounted(async () => {
+  try {
+    const res = await getMeja()
+    tables.value = res.data.map((m: any) => ({
+      id: m.kode_meja,
+      capacity: m.kapasitas,
+      status: m.status_meja === 'terisi' ? 'occupied' : 'available',
+      id_meja: m.id_meja,
+    }))
+  } catch (e) {
+    console.error('Gagal memuat data meja', e)
+  }
+})
+
 const totalAvailableCapacity = computed(() => {
-  return tables.value.filter(t => t.status === 'available').reduce((sum, t) => sum + t.capacity, 0)
+  return tables.value.filter((t: any) => t.status === 'available').reduce((sum: number, t: any) => sum + t.capacity, 0)
 })
 
 const toggleTable = (id: string) => {
@@ -139,7 +146,7 @@ const toggleTable = (id: string) => {
 
 const currentCapacity = computed(() => {
   return globalStore.reservation.tables.reduce((total, tableId) => {
-    const t = tables.value.find(x => x.id === tableId)
+    const t = tables.value.find((x: any) => x.id === tableId)
     return total + (t ? t.capacity : 0)
   }, 0)
 })
@@ -154,8 +161,23 @@ const isFormValid = computed(() => {
          globalStore.reservation.tables.length > 0
 })
 
-const goToMenu = () => {
-  globalStore.currentView = 'Menu'
+const goToMenu = async () => {
+  try {
+    const selectedMeja = tables.value.find((t: any) => t.id === globalStore.reservation.tables[0])
+    const res = await createReservasi({
+      id_meja: selectedMeja?.id_meja,
+      nama_pelanggan: globalStore.reservation.name,
+      no_telp: globalStore.reservation.contact,
+      email: '',
+      tanggal: globalStore.reservation.date,
+      jam: globalStore.reservation.time,
+    })
+    globalStore.reservation.id_reservasi = res.data.reservasi.id_reservasi
+    globalStore.currentView = 'Menu'
+  } catch (e: any) {
+    console.error('Gagal membuat reservasi', e)
+    alert(e.response?.data?.message || 'Gagal membuat reservasi. Silakan coba lagi.')
+  }
 }
 </script>
 

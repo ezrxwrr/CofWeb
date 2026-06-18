@@ -5,14 +5,16 @@ export const globalStore = reactive({
   
   // STATE BARU: Status Login
   isStaff: false,
+  staffName: '',
 
   reservation: {
+    id_reservasi: null as number | null,
     name: '',
     contact: '', 
     pax: 2,
     time: '11:00',
     date: '', 
-    tables: [] as string[], 
+    tables: [] as string[],
   },
 
   cart: [] as any[],

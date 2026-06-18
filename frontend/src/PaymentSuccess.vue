@@ -50,7 +50,7 @@ import { globalStore } from './store'
 
 const resetFlow = () => {
   globalStore.cart = []
-  globalStore.reservation = { name: '', contact: '', pax: 2, time: '11:00', date: '', tables: [] }
+  globalStore.reservation = { id_reservasi: null, name: '', contact: '', pax: 2, time: '11:00', date: '', tables: [] }
   globalStore.currentView = 'Home'
 }
 

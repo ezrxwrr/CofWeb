@@ -95,6 +95,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { globalStore } from './store'
+import { staffLogin } from './services/api'
 
 const signatureItems = ref([
   { id: 1, name: 'Iced Ceremonial Matcha', desc: 'Smooth, layered, deeply refreshing.', price: 'IDR 45K' },
@@ -132,15 +133,17 @@ const selectStaff = () => {
   }
 }
 
-const handleLogin = () => {
-  if (loginForm.username === 'admin' && loginForm.password === 'admin1234') {
+const handleLogin = async () => {
+  try {
+    const res = await staffLogin(loginForm.username, loginForm.password)
     globalStore.isStaff = true
+    globalStore.staffName = res.data.staff.nama_staff
     showLoginModal.value = false
     loginError.value = false
     loginForm.username = ''
     loginForm.password = ''
     globalStore.currentView = 'StaffDashboard'
-  } else {
+  } catch {
     loginError.value = true
   }
 }
