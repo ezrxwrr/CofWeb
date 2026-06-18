@@ -45,17 +45,26 @@
         <div class="step-header"><div class="step-number">2</div><h2>Pilih Tanggal</h2></div>
         <div class="calendar-card">
           <div class="calendar-header">
-            <span>Bulan Ini</span>
+            <button class="nav-btn" @click="previousMonth" :disabled="!canGoPrevious" title="Bulan Sebelumnya">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <span class="month-year">{{ monthYearDisplay }}</span>
+            <button class="nav-btn" @click="nextMonth" title="Bulan Berikutnya">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
           </div>
           <div class="calendar-grid">
             <div class="cal-day-header" v-for="day in ['MIN','SEN','SEL','RAB','KAM','JUM','SAB']" :key="day">{{ day }}</div>
             <div class="cal-day disabled" v-for="blank in startBlankDays" :key="'b'+blank"></div>
             <div 
               class="cal-day" 
-              v-for="day in daysInMonth" 
+              v-for="day in daysInCurrentMonth" 
               :key="day"
-              :class="{ active: globalStore.reservation.date === `${currentYear}-${currentMonth}-${day}` }"
-              @click="globalStore.reservation.date = `${currentYear}-${currentMonth}-${day}`"
+              :class="{ 
+                active: globalStore.reservation.date === formatDate(day),
+                disabled: isDateDisabled(day)
+              }"
+              @click="selectDate(day)"
             >
               {{ day }}
             </div>
@@ -106,31 +115,82 @@ import { globalStore } from './store'
 import { getMeja, createReservasi } from './services/api'
 
 const today = new Date()
-const currentYear = today.getFullYear()
-const currentMonth = today.getMonth() + 1
-const daysInMonth = new Date(currentYear, currentMonth, 0).getDate()
-const startBlankDays = new Date(currentYear, currentMonth - 1, 1).getDay()
-
-if (!globalStore.reservation.date) {
-  globalStore.reservation.date = `${currentYear}-${currentMonth}-${today.getDate()}`
-}
-
+const currentYearRef = ref(today.getFullYear())
+const currentMonthRef = ref(today.getMonth() + 1)
 const tables = ref<any[]>([])
 
-onMounted(async () => {
-  try {
-    const res = await getMeja()
-    tables.value = res.data.map((m: any) => ({
-      id: m.kode_meja,
-      capacity: m.kapasitas,
-      status: m.status_meja === 'terisi' ? 'occupied' : 'available',
-      id_meja: m.id_meja,
-    }))
-  } catch (e) {
-    console.error('Gagal memuat data meja', e)
-  }
+// Get number of days in the current month
+const daysInCurrentMonth = computed(() => {
+  return new Date(currentYearRef.value, currentMonthRef.value, 0).getDate()
 })
 
+// Get the day of week the month starts on
+const startBlankDays = computed(() => {
+  return new Date(currentYearRef.value, currentMonthRef.value - 1, 1).getDay()
+})
+
+// Format date string
+const formatDate = (day: number) => {
+  const month = String(currentMonthRef.value).padStart(2, '0')
+  const dayStr = String(day).padStart(2, '0')
+  return `${currentYearRef.value}-${month}-${dayStr}`
+}
+
+// Display month and year
+const monthYearDisplay = computed(() => {
+  const date = new Date(currentYearRef.value, currentMonthRef.value - 1)
+  return date.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+})
+
+// Check if date is in the past
+const isDateDisabled = (day: number) => {
+  const selectedDate = new Date(currentYearRef.value, currentMonthRef.value - 1, day)
+  const todayDate = new Date()
+  todayDate.setHours(0, 0, 0, 0)
+  return selectedDate < todayDate
+}
+
+// Check if we can go to previous month (only if it's current month)
+const canGoPrevious = computed(() => {
+  return currentYearRef.value > today.getFullYear() || 
+         (currentYearRef.value === today.getFullYear() && currentMonthRef.value > today.getMonth() + 1)
+})
+
+// Navigate to previous month
+const previousMonth = () => {
+  if (canGoPrevious.value) {
+    if (currentMonthRef.value === 1) {
+      currentMonthRef.value = 12
+      currentYearRef.value--
+    } else {
+      currentMonthRef.value--
+    }
+  }
+}
+
+// Navigate to next month
+const nextMonth = () => {
+  if (currentMonthRef.value === 12) {
+    currentMonthRef.value = 1
+    currentYearRef.value++
+  } else {
+    currentMonthRef.value++
+  }
+}
+
+// Select date
+const selectDate = (day: number) => {
+  if (!isDateDisabled(day)) {
+    globalStore.reservation.date = formatDate(day)
+  }
+}
+
+// Initialize with today's date if in current view
+if (!globalStore.reservation.date) {
+  globalStore.reservation.date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+}
+
+// Total kapasitas dari semua meja yang available
 const totalAvailableCapacity = computed(() => {
   return tables.value.filter((t: any) => t.status === 'available').reduce((sum: number, t: any) => sum + t.capacity, 0)
 })
@@ -201,14 +261,91 @@ const goToMenu = async () => {
 .form-row { display: flex; gap: 16px; }
 .half { flex: 1; }
 .divider { height: 1px; background-color: var(--border-color); margin: 32px 0; opacity: 0.6; }
+
+/* IMPROVED CALENDAR */
 .calendar-card { background: white; border-radius: 20px; padding: 24px; }
-.calendar-header { display: flex; justify-content: center; margin-bottom: 24px; font-family: var(--font-serif); font-weight: 600; font-size: 1.15rem; }
+
+.calendar-header { 
+  display: flex; 
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px; 
+}
+
+.month-year { 
+  font-family: var(--font-serif); 
+  font-weight: 600; 
+  font-size: 1.15rem;
+  text-align: center;
+  flex: 1;
+}
+
+.nav-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--primary);
+  transition: all 0.2s ease;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background-color: #EEF2EA;
+  border-color: var(--primary);
+}
+
+.nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  color: #A4B298;
+}
+
+.nav-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
 .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px 8px; text-align: center; }
 .cal-day-header { font-size: 0.7rem; color: #5B6A4B; font-weight: 600; margin-bottom: 8px; }
 
-/* PERBAIKAN KALENDER: Warna dipertegas pakai hex mutlak biar nggak nyaru */
-.cal-day { font-size: 0.95rem; display: flex; align-items: center; justify-content: center; height: 36px; width: 36px; margin: 0 auto; cursor: pointer; border-radius: 50%; transition: 0.2s;}
-.cal-day.active { background-color: #4A5837 !important; color: #FFFFFF !important; font-weight: bold; box-shadow: 0 4px 10px rgba(74, 88, 55, 0.4); }
+.cal-day { 
+  font-size: 0.95rem; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  height: 36px; 
+  width: 36px; 
+  margin: 0 auto; 
+  cursor: pointer; 
+  border-radius: 50%; 
+  transition: all 0.2s ease;
+}
+
+.cal-day:not(.disabled) {
+  cursor: pointer;
+}
+
+.cal-day.disabled { 
+  color: #D6DED0;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.cal-day.active { 
+  background-color: #4A5837;
+  color: #FFFFFF;
+  font-weight: bold; 
+  box-shadow: 0 4px 10px rgba(74, 88, 55, 0.4); 
+}
+
+.cal-day:not(.disabled):hover:not(.active) {
+  background-color: #EEF2EA;
+  border: 1px solid var(--primary);
+}
 
 .table-map { background: white; border-radius: 20px; padding: 24px 20px; margin-bottom: 16px; }
 .area-label { text-align: center; font-size: 0.7rem; color: #8C9C7B; letter-spacing: 1px; margin-bottom: 20px; font-weight: 600; }
@@ -234,7 +371,7 @@ const goToMenu = async () => {
   border-radius: 20px 20px 0 0; 
   z-index: 9999;
 }
-/* PERBAIKAN TOMBOL: Kunci warna background dan teks pakai !important biar nggak ilang */
+
 .btn-primary { width: 100%; padding: 16px; background-color: #4A5837 !important; border: none; color: #FFFFFF !important; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; display: block; }
 .btn-primary:disabled { background-color: #A4B298 !important; cursor: not-allowed; opacity: 1; }
 </style>

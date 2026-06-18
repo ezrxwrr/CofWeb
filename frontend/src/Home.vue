@@ -47,7 +47,7 @@
     </div>
 
     <nav class="top-nav">
-      <button class="icon-btn" @click="isSidebarOpen = true">
+      <button class="icon-btn hamburger-btn" @click="isSidebarOpen = true">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
       <div class="logo"><span class="logo-text">Ijoo</span></div>
@@ -63,9 +63,7 @@
     </header>
 
     <div class="cta-group">
-      <button class="btn btn-primary" @click="goToReservation">Reservasi Sekarang</button>
-      <button class="btn btn-outline" @click="goToMenu">Lihat Menu</button>
-      <button class="btn btn-outline" @click="globalStore.currentView = 'OrderHistory'">Riwayat Pesanan</button>
+      <button class="btn btn-history" @click="goToOrderHistory">Riwayat Pesanan</button>
     </div>
 
     <section class="philosophy-card">
@@ -102,8 +100,8 @@ const signatureItems = ref([
   { id: 2, name: 'Hojicha Latte', desc: 'Roasted green tea with creamy milk.', price: 'IDR 40K' }
 ])
 
-const goToReservation = () => { globalStore.currentView = 'TableReservation' }
 const goToMenu = () => { globalStore.currentView = 'Menu' }
+const goToOrderHistory = () => { globalStore.currentView = 'OrderHistory' }
 
 // Logika Sidebar & Login
 const isSidebarOpen = ref(false)
@@ -177,18 +175,90 @@ const handleLogin = async () => {
 
 /* Original Home Styles */
 .top-nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; }
-.icon-btn { background: none; border: none; color: var(--text-main); cursor: pointer; }
+
+.hamburger-btn { background: none; border: none; color: var(--text-main); cursor: pointer; transition: transform 0.3s ease; }
+.hamburger-btn:active { transform: scale(0.95); }
+
+/* Hamburger animation */
+.hamburger-btn svg {
+  animation: hamburgerSlideInRight 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes hamburgerSlideInRight {
+  from {
+    transform: translateX(-15px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
 .logo-text { font-family: var(--font-serif); font-size: 1.5rem; font-weight: bold; letter-spacing: -1px; }
 .hero { padding: 0 20px; margin-bottom: 24px; }
 .hero-image-placeholder { background: #334; border-radius: 24px; height: 300px; display: flex; align-items: flex-end; overflow: hidden; }
 .hero-overlay { padding: 24px; color: #fff; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); width: 100%; }
 .hero-overlay h2 { font-family: var(--font-serif); font-size: 2rem; margin-bottom: 8px; font-weight: normal; }
 .hero-overlay p { font-size: 0.9rem; color: #ddd; }
-.cta-group { display: flex; flex-direction: column; gap: 12px; padding: 0 20px; margin-bottom: 32px; }
-.btn { padding: 16px; border-radius: 30px; font-weight: 600; font-size: 0.95rem; cursor: pointer; text-align: center; transition: 0.2s;}
-.btn:active { transform: scale(0.98); }
+
+/* Updated CTA Group - Single Button */
+.cta-group { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 12px; 
+  padding: 0 20px; 
+  margin-bottom: 32px; 
+}
+
+.btn { 
+  padding: 16px; 
+  border-radius: 30px; 
+  font-weight: 600; 
+  font-size: 0.95rem; 
+  cursor: pointer; 
+  text-align: center; 
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn:active { 
+  transform: scale(0.97);
+}
+
+/* Riwayat Pesanan Button - Enhanced Styling */
+.btn-history {
+  background: linear-gradient(135deg, #4A5837 0%, #5B6A4B 100%);
+  color: white;
+  box-shadow: 0 8px 20px rgba(74, 88, 55, 0.3);
+  animation: slideDownFadeIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.btn-history:hover {
+  box-shadow: 0 12px 28px rgba(74, 88, 55, 0.4);
+}
+
+.btn-history:active {
+  transform: scale(0.97) translateY(2px);
+  box-shadow: 0 4px 12px rgba(74, 88, 55, 0.3);
+}
+
+@keyframes slideDownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .btn-primary { background-color: var(--primary); color: rgb(69, 68, 68); border: none; }
 .btn-outline { background-color: transparent; color: var(--primary); border: 1px solid var(--primary); }
+
 .philosophy-card { background-color: var(--card-bg); margin: 0 20px 40px; padding: 32px 24px; border-radius: 20px; }
 .philosophy-card h3 { font-family: var(--font-serif); font-size: 1.3rem; margin-bottom: 16px; color: var(--primary); font-weight: normal; }
 .philosophy-card p { line-height: 1.6; font-size: 0.95rem; }
@@ -203,5 +273,6 @@ const handleLogin = async () => {
 .product-info p { margin-bottom: 16px; font-size: 0.85rem; color: #666; line-height: 1.4; }
 .product-bottom { display: flex; justify-content: space-between; align-items: center; }
 .price { font-weight: bold; font-size: 0.9rem; color: var(--primary); }
-.add-btn { background-color: var(--primary); border: none; border-radius: 50%; width: 28px; height: 28px; color: white; cursor: pointer; }
+.add-btn { background-color: var(--primary); border: none; border-radius: 50%; width: 28px; height: 28px; color: white; cursor: pointer; transition: transform 0.2s; }
+.add-btn:active { transform: scale(0.9); }
 </style>

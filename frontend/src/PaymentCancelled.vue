@@ -43,7 +43,15 @@ import { globalStore } from './store'
 
 const resetFlow = () => {
   globalStore.cart = []
-  globalStore.reservation = { name: '', contact: '', pax: 2, time: '11:00', date: '', tables: [] }
+  globalStore.reservation = { 
+    id_reservasi: null, 
+    name: '', 
+    contact: '', 
+    pax: 2, 
+    time: '11:00', 
+    date: '', 
+    tables: [] as string[] 
+  }
   globalStore.currentView = 'Home'
 }
 
@@ -80,5 +88,6 @@ const pageDescription = computed(() => {
 .note-text { font-size: 0.9rem; color: #2A3620; line-height: 1.5; }
 .manual-reason { margin-top: 12px; font-style: italic; color: #D32F2F; }
 .bottom-area { padding: 0 24px; margin-top: 20px; }
-.btn-outline { width: 100%; padding: 16px; border: 1px solid #2A3620 !important; background: transparent !important; color: #2A3620 !important; border-radius: 30px; font-weight: 600; font-size: 0.9rem; letter-spacing: 1px; cursor: pointer; display: block; text-align: center; }
+.btn-outline { width: 100%; padding: 16px; border: 1px solid #2A3620 !important; background: transparent !important; color: #2A3620 !important; border-radius: 30px; font-weight: 600; font-size: 0.9rem; letter-spacing: 1px; cursor: pointer; display: block; text-align: center; transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+.btn-outline:active { transform: scale(0.96); }
 </style>
