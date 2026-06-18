@@ -6,22 +6,19 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('menus', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
+        Schema::create('menu', function (Blueprint $table) {
+            $table->bigIncrements('id_menu');        // bigint(20) primary
+            $table->string('nama_item', 100);         // varchar(100)
+            $table->text('deskripsi')->nullable();    // text
+            $table->bigInteger('harga');              // bigint
+            $table->decimal('pax', 5, 2);            // decimal(5,2)
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('menus');
+        Schema::dropIfExists('menu');
     }
 };

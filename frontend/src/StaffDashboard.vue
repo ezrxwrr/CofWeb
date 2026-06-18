@@ -99,14 +99,25 @@
         </div>
         <div class="form-group">
           <label>HARGA (Rp)</label>
-          <input type="number" v-model="newMenu.harga" placeholder="0" class="form-input" />
+          <input type="number" v-model.number="newMenu.harga" placeholder="Contoh: 35000" class="form-input" min="1" />
         </div>
         <div class="modal-actions">
           <button class="btn-sm btn-outline" @click="showMenuForm = false">Batal</button>
-          <button class="btn-sm btn-approve" @click="submitNewMenu" :disabled="!newMenu.nama_item || !newMenu.harga">Simpan</button>
+          <button class="btn-sm btn-approve" @click="submitNewMenu" :disabled="!newMenu.nama_item || !newMenu.harga || isSubmitting">
+            {{ isSubmitting ? 'Menyimpan...' : 'Simpan' }}
+          </button>
         </div>
       </div>
     </div>
+
+    <!-- Toast Notifikasi -->
+    <transition name="toast-slide">
+      <div v-if="toast.show" :class="['toast-notification', toast.type === 'error' ? 'toast-error' : 'toast-success']">
+        <svg v-if="toast.type === 'success'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        {{ toast.message }}
+      </div>
+    </transition>
 
     <button class="fab-btn" @click="handleFabClick">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -218,7 +229,19 @@ const syncAvailability = (id: number, isAvail: boolean) => {
 
 // 4. TAMBAH MENU
 const showMenuForm = ref(false)
-const newMenu = ref({ nama_item: '', harga: 0, deskripsi: '' })
+const isSubmitting = ref(false)
+const newMenu = ref<{ nama_item: string; harga: number | null; deskripsi: string }>({
+  nama_item: '',
+  harga: null,
+  deskripsi: '',
+})
+
+// Toast notifikasi
+const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'error' })
+const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+  toast.value = { show: true, message, type }
+  setTimeout(() => { toast.value.show = false }, 3000)
+}
 
 const refreshMenu = async () => {
   try {
@@ -235,13 +258,28 @@ const refreshMenu = async () => {
 }
 
 const submitNewMenu = async () => {
+  if (!newMenu.value.nama_item || !newMenu.value.harga) return
+  isSubmitting.value = true
   try {
-    await createMenu(newMenu.value)
+    await createMenu({
+      nama_item: newMenu.value.nama_item,
+      harga: Number(newMenu.value.harga),
+      deskripsi: newMenu.value.deskripsi,
+    })
     showMenuForm.value = false
-    newMenu.value = { nama_item: '', harga: 0, deskripsi: '' }
+    newMenu.value = { nama_item: '', harga: null, deskripsi: '' }
     await refreshMenu()
-  } catch (e) {
+    showToast('Menu berhasil ditambahkan!')
+  } catch (e: any) {
+    const msg =
+      e?.response?.data?.message ||
+      e?.response?.data?.errors
+        ? Object.values(e?.response?.data?.errors ?? {}).flat().join(', ')
+        : 'Gagal menambahkan menu. Periksa koneksi dan coba lagi.'
+    showToast(String(msg), 'error')
     console.error('Gagal tambah menu', e)
+  } finally {
+    isSubmitting.value = false
   }
 }
 
@@ -381,4 +419,28 @@ input:checked + .slider:before { transform: translateX(20px); }
 .icon-wrapper { padding: 6px 16px; border-radius: 16px; display: flex; justify-content: center; align-items: center; transition: 0.2s;}
 .staff-bottom-nav .nav-item.active { color: #4A5837; }
 .staff-bottom-nav .nav-item.active .icon-wrapper { background: #EEF2EA; }
+/* Toast Notifikasi */
+.toast-notification {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  z-index: 99999;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  max-width: 320px;
+  text-align: center;
+  white-space: nowrap;
+}
+.toast-success { background: #4A5837; color: white; }
+.toast-error   { background: #C62828; color: white; }
+
+.toast-slide-enter-active, .toast-slide-leave-active { transition: all 0.3s ease; }
+.toast-slide-enter-from, .toast-slide-leave-to { opacity: 0; transform: translateX(-50%) translateY(-12px); }
 </style>

@@ -18,24 +18,24 @@ class MenuController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nama_item' => 'required',
-            'harga' => 'required|numeric',
-            'deskripsi' => 'nullable',
-            'id_kategori' => 'nullable|exists:menu,id_kategori',
-            'pax' => 'nullable|numeric',
+            'nama_item'   => 'required|string|max:255',
+            'harga'       => 'required|numeric|min:1',
+            'deskripsi'   => 'nullable|string',
+            //'id_kategori' => 'nullable|integer',   // hapus exists:menu agar tidak error
+            'pax'         => 'nullable|numeric|min:1',
         ]);
 
         $menu = Menu::create([
-            'nama_item' => $request->nama_item,
-            'harga' => $request->harga,
-            'deskripsi' => $request->deskripsi ?? '',
-            'id_kategori' => $request->id_kategori,
-            'pax' => $request->pax ?? 1,
+            'nama_item'   => $request->nama_item,
+            'harga'       => $request->harga,
+            'deskripsi'   => $request->deskripsi ?? '',
+            //'id_kategori' => $request->id_kategori,
+            'pax'         => $request->pax ?? 1,
         ]);
 
         return response()->json([
             'message' => 'Menu berhasil ditambahkan',
-            'menu' => $menu
+            'menu'    => $menu,
         ], 201);
     }
 }
