@@ -11,7 +11,7 @@
         <div class="card-header">
           <span class="label">DETAIL RESERVASI</span>
         </div>
-        <div class="detail-row"><span class="row-label">NAMA PEMESAN</span><span class="row-value">Anyone, idk, idc, type shit</span></div>
+        <div class="detail-row"><span class="row-label">NAMA PEMESAN</span><span class="row-value">Anyone</span></div>
         <div class="detail-row"><span class="row-label">MEJA</span><span class="row-value">Meja 4 - Luar Ruangan</span></div>
         <div class="detail-row"><span class="row-label">WAKTU</span><span class="row-value">14:00, 24 Mei 2026</span></div>
         <div class="detail-row"><span class="row-label">JUMLAH TAMU</span><span class="row-value">2 Orang</span></div>
