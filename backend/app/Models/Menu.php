@@ -10,6 +10,8 @@ class Menu extends Model
 
     protected $primaryKey = 'id_menu';
 
+    public $timestamps = false;
+
     protected $fillable = [
         //'id_kategori',
         'nama_item',
