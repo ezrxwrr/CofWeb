@@ -17,7 +17,7 @@ export const getMenus = () => api.get('/menus')
 export const createMenu = (data: any) => api.post('/menus', data)
 
 export const staffLogin = (username: string, password: string) =>
-  api.post('/staff/login', { username, password })
+  api.post('/login.php', { username, password })
 
 export const getReservasi = () => api.get('/reservasi')
 
