@@ -119,6 +119,20 @@ const currentYearRef = ref(today.getFullYear())
 const currentMonthRef = ref(today.getMonth() + 1)
 const tables = ref<any[]>([])
 
+onMounted(async () => {
+  try {
+    const res = await getMeja()
+    tables.value = res.data.map((m: any) => ({
+      id: m.kode_meja,
+      capacity: m.kapasitas,
+      status: m.status_meja === 'terisi' ? 'occupied' : 'available',
+      id_meja: m.id_meja,
+    }))
+  } catch (e) {
+    console.error('Gagal memuat data meja', e)
+  }
+})
+
 // Get number of days in the current month
 const daysInCurrentMonth = computed(() => {
   return new Date(currentYearRef.value, currentMonthRef.value, 0).getDate()
