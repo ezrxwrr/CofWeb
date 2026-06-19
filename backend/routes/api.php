@@ -19,6 +19,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::get('/menus', [MenuController::class, 'index']);
 Route::post('/menus', [MenuController::class, 'store']);
+Route::post('/menus/{id}/upload', [MenuController::class, 'uploadImage']);
 
 Route::get('/meja', [MejaController::class, 'index']);
 Route::get('/meja/{id}', [MejaController::class, 'show']);

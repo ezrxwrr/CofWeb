@@ -97,6 +97,11 @@
           <label>HARGA (Rp)</label>
           <input type="number" v-model.number="newMenu.harga" placeholder="Contoh: 35000" class="form-input" min="1" />
         </div>
+        <div class="form-group">
+          <label>GAMBAR (opsional)</label>
+          <input type="file" accept="image/*" @change="onNewMenuImageSelected" class="form-input" />
+          <span v-if="newMenuImageName" style="font-size:0.75rem;color:#5B6A4B;">{{ newMenuImageName }}</span>
+        </div>
         <div class="modal-actions">
           <button class="btn-sm btn-outline" @click="showMenuForm = false">Batal</button>
           <button class="btn-sm btn-approve" @click="submitNewMenu" :disabled="!newMenu.nama_item || !newMenu.harga">Simpan</button>
@@ -134,7 +139,7 @@ import { ref, computed, onMounted } from 'vue'
 import { globalStore } from './store'
 import {
   getMeja, getMenus, getReservasi, updateReservasi, createMenu,
-  occupyMeja, vacateMeja
+  occupyMeja, vacateMeja, uploadMenuImage
 } from './services/api'
 
 const todayDate = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
@@ -230,16 +235,20 @@ const handleImageUpload = async (event: Event, itemId: number) => {
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('Canvas not supported')
     ctx.drawImage(bitmap, 0, 0)
-    canvas.toBlob((blob) => {
-      if (!blob) { uploadMessage.value = "Gagal memproses blob gambar."; uploadSuccess.value = false; return }
-      const webpFile = new File([blob], `menu-${itemId}-${Date.now()}.webp`, { type: 'image/webp' })
-      const item = menuItems.value.find(m => m.id === itemId)
-      if (item) { item.imageFile = webpFile; item.imagePreview = URL.createObjectURL(webpFile) }
-      uploadMessage.value = "Gambar dikonversi ke WebP dan siap dikirim!"
-      uploadSuccess.value = true
-    }, 'image/webp', 0.8)
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', 0.8))
+    if (!blob) { uploadMessage.value = "Gagal memproses blob gambar."; uploadSuccess.value = false; return }
+    const webpFile = new File([blob], `menu-${itemId}-${Date.now()}.webp`, { type: 'image/webp' })
+    uploadMessage.value = "Mengunggah gambar..."
+    const res = await uploadMenuImage(itemId, webpFile)
+    const item = menuItems.value.find(m => m.id === itemId)
+    if (item) {
+      item.imagePreview = res.data.gambar
+      item.imageFile = webpFile
+    }
+    uploadMessage.value = "Gambar berhasil diupload!"
+    uploadSuccess.value = true
   } catch {
-    uploadMessage.value = "Gagal memproses gambar."
+    uploadMessage.value = "Gagal mengupload gambar."
     uploadSuccess.value = false
   }
 }
@@ -252,7 +261,7 @@ const fetchMenu = async () => {
       name: m.nama_item,
       price: m.harga,
       isAvailable: true,
-      imagePreview: null as string | null,
+      imagePreview: m.gambar || null,
       imageFile: null as File | null,
     }))
   } catch (e) {
@@ -263,17 +272,34 @@ const fetchMenu = async () => {
 // 4. TAMBAH MENU
 const showMenuForm = ref(false)
 const newMenu = ref({ nama_item: '', harga: null as number | null, deskripsi: '' })
+const newMenuImage = ref<File | null>(null)
+const newMenuImageName = ref('')
+
+const onNewMenuImageSelected = (e: Event) => {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (file) {
+    newMenuImage.value = file
+    newMenuImageName.value = file.name
+  }
+}
 
 const submitNewMenu = async () => {
   if (!newMenu.value.nama_item || !newMenu.value.harga) return
   try {
-    await createMenu({
+    const res = await createMenu({
       nama_item: newMenu.value.nama_item,
       harga: Number(newMenu.value.harga),
       deskripsi: newMenu.value.deskripsi,
     })
+    const createdId = res.data.menu.id_menu
+    if (newMenuImage.value) {
+      await uploadMenuImage(createdId, newMenuImage.value)
+    }
     showMenuForm.value = false
     newMenu.value = { nama_item: '', harga: null, deskripsi: '' }
+    newMenuImage.value = null
+    newMenuImageName.value = ''
     await fetchMenu()
     uploadMessage.value = 'Menu berhasil ditambahkan!'
     uploadSuccess.value = true

@@ -17,6 +17,7 @@ class Menu extends Model
         'nama_item',
         'deskripsi',
         'harga',
+        'gambar',
         'pax'
     ];
 }

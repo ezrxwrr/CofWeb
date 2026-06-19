@@ -38,4 +38,28 @@ class MenuController extends Controller
             'menu'    => $menu,
         ], 201);
     }
+
+    public function uploadImage(Request $request, $id)
+    {
+        $menu = Menu::find($id);
+
+        if (!$menu) {
+            return response()->json(['message' => 'Menu tidak ditemukan'], 404);
+        }
+
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+        ]);
+
+        $image = $request->file('image');
+        $filename = 'menu-' . $id . '-' . time() . '.webp';
+        $path = $image->storeAs('public/menu', $filename);
+
+        $menu->update(['gambar' => 'storage/menu/' . $filename]);
+
+        return response()->json([
+            'message' => 'Gambar berhasil diupload',
+            'gambar'  => $menu->gambar,
+        ]);
+    }
 }
