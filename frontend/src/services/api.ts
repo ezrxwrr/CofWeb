@@ -16,6 +16,14 @@ export const getMenus = () => api.get('/menus')
 
 export const createMenu = (data: any) => api.post('/menus', data)
 
+export const uploadMenuImage = (id: number, file: File) => {
+  const formData = new FormData()
+  formData.append('image', file)
+  return api.post(`/menus/${id}/upload`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
 export const staffLogin = (username: string, password: string) =>
   api.post('/login.php', { username, password })
 

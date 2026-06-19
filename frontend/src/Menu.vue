@@ -12,7 +12,8 @@
 
     <div class="menu-list">
       <div class="menu-card" v-for="item in menuItems" :key="item.id" @click="addToCart(item)">
-        <div class="emoji-placeholder">{{ item.emoji }}</div>
+        <div class="emoji-placeholder" v-if="!item.image">{{ item.emoji }}</div>
+        <img v-else :src="item.image" :alt="item.name" class="menu-item-image" />
         
         <div class="card-content">
           <h3>{{ item.name }}</h3>
@@ -82,6 +83,7 @@ onMounted(async () => {
       desc: m.deskripsi,
       price: m.harga,
       pax: m.pax,
+      image: m.gambar || null,
       emoji: getEmoji(m.nama_item),
     }))
   } catch (e) {
@@ -133,6 +135,7 @@ const goToPayment = () => {
 .menu-card:active { transform: scale(0.98); border-color: var(--primary); }
 
 .emoji-placeholder { font-size: 2.2rem; background-color: var(--card-bg); width: 80px; height: 80px; display: flex; justify-content: center; align-items: center; border-radius: 12px; flex-shrink: 0; }
+.menu-item-image { width: 80px; height: 80px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
 .card-content { flex: 1; pointer-events: none; }
 .card-content h3 { font-family: var(--font-serif); font-size: 1rem; }
 .desc { font-size: 0.8rem; color: #666; margin: 4px 0 12px; line-height: 1.3;}
